@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import '../models/event.dart';
 import '../theme/app_colors.dart';
+import '../widgets/category_chip.dart';
+import '../widgets/event_info_card.dart';
+
+
 
 class EditEventScreen extends StatefulWidget {
-  final Event event;
+  final EventModel event;
 
   const EditEventScreen({super.key, required this.event});
 
@@ -12,269 +18,235 @@ class EditEventScreen extends StatefulWidget {
 }
 
 class _EditEventScreenState extends State<EditEventScreen> {
-  late final TextEditingController titleController;
-  late final TextEditingController descriptionController;
-  late DateTime selectedDate;
-  late String selectedTime;
-  late String selectedCategory;
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late EventCategory _selectedCategory;
+  late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
 
   @override
   void initState() {
     super.initState();
-    titleController = TextEditingController(text: widget.event.title);
-    descriptionController =
+    _titleController = TextEditingController(text: widget.event.title);
+    _descriptionController =
         TextEditingController(text: widget.event.description);
-    selectedDate = widget.event.date;
-    selectedTime = widget.event.time;
-    selectedCategory = widget.event.category;
+    _selectedCategory = widget.event.category;
+    _selectedDate = widget.event.eventDate;
+    _selectedTime = widget.event.eventTime;
   }
 
   @override
   void dispose() {
-    titleController.dispose();
-    descriptionController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
-  Future<void> pickDate() async {
-    final result = await showDatePicker(
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate,
+      initialDate: _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.fromSeed(seedColor: AppColors.blue),
-          ),
-          child: child!,
-        );
-      },
+      lastDate: DateTime(2100),
     );
-
-    if (result != null) {
-      setState(() => selectedDate = result);
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
-  Future<void> pickTime() async {
-    final parts = selectedTime.split(' ');
-    final hm = parts.first.split(':');
-    final initial = TimeOfDay(
-      hour: int.tryParse(hm[0]) ?? 12,
-      minute: int.tryParse(hm[1]) ?? 12,
-    );
-
-    final result = await showTimePicker(
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
       context: context,
-      initialTime: initial,
+      initialTime: _selectedTime,
     );
-
-    if (result != null) {
-      setState(() => selectedTime = result.format(context));
-    }
+    if (picked != null) setState(() => _selectedTime = picked);
   }
 
-  void save() {
-    widget.event
-      ..title = titleController.text.trim().isEmpty
-          ? 'Untitled event'
-          : titleController.text.trim()
-      ..description = descriptionController.text.trim()
-      ..category = selectedCategory
-      ..date = selectedDate
-      ..time = selectedTime
-      ..imageAsset = selectedCategory == 'Book club'
-          ? 'assets/images/book_club.png'
-          : 'assets/images/sport.png';
-
-    Navigator.pop(context, true);
-  }
-
-  String formatDate(DateTime date) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  void _onUpdatePressed() {
+    final updatedEvent = widget.event.copyWith(
+      title: _titleController.text,
+      description: _descriptionController.text,
+      category: _selectedCategory,
+      eventDate: _selectedDate,
+      eventTime: _selectedTime,
+    );
+    Navigator.pop(context, updatedEvent);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        title: const Text(
+          'Edit event',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _header(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _categorySelector(),
-                    const SizedBox(height: 14),
-                    _label('Title'),
-                    const SizedBox(height: 6),
-                    TextField(controller: titleController),
-                    const SizedBox(height: 14),
-                    _label('Description'),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: descriptionController,
-                      maxLines: 5,
-                    ),
-                    const SizedBox(height: 14),
-                    _dateRow(),
-                    const SizedBox(height: 8),
-                    _timeRow(),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: FilledButton(
-                        onPressed: save,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.blue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                        ),
-                        child: const Text(
-                          'Update event',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  ],
+            const SizedBox(height: 8),
+            _CoverImage(category: _selectedCategory),
+            const SizedBox(height: 16),
+
+
+            SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: EventCategory.all.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final category = EventCategory.all[index];
+                  return CategoryChip(
+                    category: category,
+                    isSelected: category.id == _selectedCategory.id,
+                    onTap: () => setState(() => _selectedCategory = category),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            const _FieldLabel('Title'),
+            const SizedBox(height: 8),
+            _RoundedTextField(controller: _titleController),
+            const SizedBox(height: 20),
+
+            const _FieldLabel('Description'),
+            const SizedBox(height: 8),
+            _RoundedTextField(
+              controller: _descriptionController,
+              maxLines: 6,
+            ),
+            const SizedBox(height: 12),
+
+            EditableInfoRow(
+              icon: Icons.calendar_today_outlined,
+              label: 'Event Date',
+              value: DateFormat('MMM d, yyyy').format(_selectedDate),
+              onTap: _pickDate,
+            ),
+            const Divider(height: 1, color: AppColors.border),
+            EditableInfoRow(
+              icon: Icons.access_time,
+              label: 'Event Time',
+              value: _selectedTime.format(context),
+              onTap: _pickTime,
+            ),
+            const SizedBox(height: 28),
+
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: _onUpdatePressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Update event',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 18, 4),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.chevron_left, color: AppColors.blue),
-          ),
-          const Expanded(
-            child: Text(
-              'Edit event',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-                color: AppColors.text,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
 
-  Widget _categorySelector() {
-    return Wrap(
-      spacing: 7,
-      children: [
-        _choice('Book club', Icons.menu_book_outlined),
-        _choice('Sport', Icons.sports_soccer_outlined),
-        _choice('Birthday', Icons.cake_outlined),
-      ],
-    );
-  }
-
-  Widget _choice(String label, IconData icon) {
-    final selected = selectedCategory == label;
-    return GestureDetector(
-      onTap: () => setState(() => selectedCategory = label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.lightBlue : Colors.white,
-          border: Border.all(
-            color: selected ? AppColors.blue : AppColors.border,
-          ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 20, color: AppColors.blue),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                color: AppColors.text,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _label(String value) {
+  @override
+  Widget build(BuildContext context) {
     return Text(
-      value,
+      text,
       style: const TextStyle(
-        fontSize: 20,
+        fontSize: 15,
         fontWeight: FontWeight.w600,
-        color: AppColors.text,
+        color: AppColors.textPrimary,
       ),
     );
   }
+}
 
-  Widget _dateRow() {
-    return InkWell(
-      onTap: pickDate,
-      child: Row(
-        children: [
-          const Icon(Icons.calendar_month_outlined, size: 30, color: AppColors.blue),
-          const SizedBox(width: 7),
-          const Text('Event Date', style: TextStyle(fontSize: 15)),
-          const Spacer(),
-          Text(
-            formatDate(selectedDate),
-            style: const TextStyle(
-              fontSize: 20,
-              color: AppColors.blue,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+class _RoundedTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final int maxLines;
+
+  const _RoundedTextField({
+    required this.controller,
+    this.maxLines = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: AppColors.cardBackground,
+        contentPadding: const EdgeInsets.all(14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
       ),
     );
   }
+}
 
-  Widget _timeRow() {
-    return InkWell(
-      onTap: pickTime,
-      child: Row(
-        children: [
-          const Icon(Icons.access_time_outlined, size: 30, color: AppColors.blue),
-          const SizedBox(width: 7),
-          const Text('Event Time', style: TextStyle(fontSize: 15)),
-          const Spacer(),
-          Text(
-            selectedTime,
-            style: const TextStyle(
-              fontSize: 20,
-              color: AppColors.blue,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+
+class _CoverImage extends StatelessWidget {
+  final EventCategory category;
+
+  const _CoverImage({required this.category});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 160,
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        category.label,
+        style: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.w900,
+          color: category.color,
+          letterSpacing: 1,
+        ),
       ),
     );
   }

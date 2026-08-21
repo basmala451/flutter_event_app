@@ -1,22 +1,29 @@
+import 'package:event_ui/theme/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'data/event_data.dart';
+
+import 'models/event.dart';
+
 import 'screens/event_details_screen.dart';
-import 'theme/app_theme.dart';
 
 void main() {
-  runApp(const EventApp());
+  runApp(const MyApp());
 }
 
-class EventApp extends StatelessWidget {
-  const EventApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Event App',
       debugShowCheckedModeBanner: false,
-      title: 'Events',
-      theme: AppTheme.theme,
-      home: EventDetailsScreen(event: EventData.initialEvent),
+      theme: ThemeData(
+        scaffoldBackgroundColor: AppColors.background,
+        primaryColor: AppColors.primary,
+        fontFamily: 'Roboto',
+        useMaterial3: true,
+      ),
+      home: EventDetailsScreen(event: EventModel.mock()),
     );
   }
 }
